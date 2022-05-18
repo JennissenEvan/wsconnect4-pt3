@@ -20,4 +20,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // Initialize the UI.
   const board = document.querySelector(".board");
   createBoard(board);
+  // Open the WebSocket connection and register event handlers.
+  const websocket = new WebSocket("ws://localhost:8001/");
+  sendMoves(board, websocket);
 });
