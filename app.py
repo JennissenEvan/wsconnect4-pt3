@@ -6,6 +6,9 @@ import json
 from connect4 import PLAYER1, PLAYER2, Connect4
 
 
+JOIN = {}
+
+
 async def handler(websocket: websockets.WebSocketServerProtocol):
     # Initialize a Connect Four game.
     game = Connect4()
