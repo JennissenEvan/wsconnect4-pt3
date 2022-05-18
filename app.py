@@ -4,47 +4,47 @@ import asyncio
 import websockets
 import json
 from connect4 import PLAYER1, PLAYER2, Connect4
+import secrets
 
 
 JOIN = {}
 
 
-async def handler(websocket: websockets.WebSocketServerProtocol):
-    # Initialize a Connect Four game.
+async def start(websocket):
+    # Initialize a Connect Four game, the set of WebSocket connections
+    # receiving moves from this game, and secret access token.
     game = Connect4()
+    connected = {websocket}
 
-    async for message in websocket:
-        event = json.loads(message)
+    join_key = secrets.token_urlsafe(12)
+    JOIN[join_key] = game, connected
 
-        if event["type"] == "play":
-            current_player = PLAYER1 if game.last_player is PLAYER2 else PLAYER2
-            column = event["column"]
+    try:
+        # Send the secret access token to the browser of the first player,
+        # where it'll be used for building a "join" link.
+        event = {
+            "type": "init",
+            "join": join_key,
+        }
+        await websocket.send(json.dumps(event))
 
-            try:
-                row = game.play(current_player, column)
-                out_event = {
-                    "type": "play",
-                    "player": current_player,
-                    "column": column,
-                    "row": row
-                }
-                await websocket.send(json.dumps(out_event))
+        # Temporary - for testing.
+        print("first player started game", id(game))
+        async for message in websocket:
+            print("first player sent", message)
 
-            except RuntimeError as e:
-                out_event = {
-                    "type": "error",
-                    "message": str(e)
-                }
-                await websocket.send(json.dumps(out_event))
+    finally:
+        del JOIN[join_key]
 
-                continue
 
-            if game.last_player_won:
-                out_event = {
-                    "type": "win",
-                    "player": game.last_player
-                }
-                await websocket.send(json.dumps(out_event))
+async def handler(websocket):
+    # Receive and parse the "init" event from the UI.
+    message = await websocket.recv()
+    event = json.loads(message)
+    assert event["type"] == "init"
+
+    # First player starts a new game.
+    await start(websocket)
 
 
 async def main():
