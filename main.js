@@ -1,5 +1,13 @@
 import { createBoard, playMove } from "./connect4.js";
 
+function initGame(websocket) {
+  websocket.addEventListener("open", () => {
+    // Send an "init" event for the first player.
+    const event = { type: "init" };
+    websocket.send(JSON.stringify(event));
+  });
+}
+
 function sendMoves(board, websocket) {
   // When clicking a column, send a "play" event for a move in that column.
   board.addEventListener("click", ({ target }) => {
