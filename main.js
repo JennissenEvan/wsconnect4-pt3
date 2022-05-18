@@ -32,6 +32,10 @@ function receiveMoves(board, websocket) {
   websocket.addEventListener("message", ({ data }) => {
     const event = JSON.parse(data);
     switch (event.type) {
+      case "init":
+        // Create link for inviting the second player.
+        document.querySelector(".join").href = "?join=" + event.join;
+        break;
       case "play":
         // Update the UI with the move.
         playMove(board, event.player, event.column, event.row);
