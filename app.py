@@ -7,7 +7,10 @@ import websockets
 
 async def handler(websocket):
     while True:
-        message = await websocket.recv()
+        try:
+            message = await websocket.recv()
+        except websockets.ConnectionClosedOK:
+            break
         print(message)
 
 
