@@ -19,8 +19,7 @@ async def error(websocket, message):
 
 
 async def broadcast(connected, event):
-    for websocket in connected:
-        await websocket.send(json.dumps(event))
+    websockets.broadcast(connected, json.dumps(event))
 
 
 async def play(websocket, game, player, connected):
