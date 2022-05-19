@@ -24,6 +24,17 @@ async def broadcast(connected, event):
     websockets.broadcast(connected, json.dumps(event))
 
 
+async def send_history(websocket, game):
+    for player, column, row in game.moves:
+        event = {
+            "type": "play",
+            "player": player,
+            "column": column,
+            "row": row
+        }
+        await websocket.send(json.dumps(event))
+
+
 async def play(websocket, game, player, connected):
     async for message in websocket:
         event = json.loads(message)
@@ -98,6 +109,8 @@ async def join(websocket, join_key):
         await error(websocket, "Game not found.")
         return
 
+    await send_history(websocket, game)
+
     # Register to receive moves from this game.
     connected.add(websocket)
     try:
@@ -115,6 +128,8 @@ async def watch(websocket, watch_key):
         return
 
     game, connected = watch_info
+
+    await send_history(websocket, game)
 
     connected.add(websocket)
     try:
