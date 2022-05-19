@@ -9,6 +9,8 @@ import secrets
 
 JOIN = {}
 
+WATCH = {}
+
 
 async def error(websocket, message):
     event = {
@@ -29,6 +31,7 @@ async def play(websocket, game, player, connected):
         if event["type"] == "play":
             if len(connected) < 2:
                 await error(websocket, "The other player has not connected yet.")
+                continue
 
             if player is game.last_player:
                 await error(websocket, "It's not your turn!")
@@ -68,12 +71,16 @@ async def start(websocket):
     join_key = secrets.token_urlsafe(12)
     JOIN[join_key] = game, connected
 
+    watch_key = secrets.token_urlsafe(12)
+    WATCH[watch_key] = game, connected
+
     try:
         # Send the secret access token to the browser of the first player,
         # where it'll be used for building a "join" link.
         event = {
             "type": "init",
             "join": join_key,
+            "watch": watch_key
         }
         await websocket.send(json.dumps(event))
 
@@ -100,6 +107,22 @@ async def join(websocket, join_key):
         connected.remove(websocket)
 
 
+async def watch(websocket, watch_key):
+    watch_info = WATCH.get(watch_key, None)
+
+    if watch_info is None:
+        await error(websocket, "Game not found.")
+        return
+
+    game, connected = watch_info
+
+    connected.add(websocket)
+    try:
+        await websocket.wait_closed()
+    finally:
+        connected.remove(websocket)
+
+
 async def handler(websocket):
     # Receive and parse the "init" event from the UI.
     message = await websocket.recv()
@@ -109,6 +132,8 @@ async def handler(websocket):
     if "join" in event:
         # Second player joins an existing game.
         await join(websocket, event["join"])
+    elif "watch" in event:
+        await watch(websocket, event["watch"])
     else:
         # First player starts a new game.
         await start(websocket)

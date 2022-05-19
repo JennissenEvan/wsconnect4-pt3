@@ -8,6 +8,8 @@ function initGame(websocket) {
     if (params.has("join")) {
       // Second player joins an existing game.
       event.join = params.get("join");
+    } else if (params.has("watch")) {
+      event.watch = params.get("watch")
     } else {
       // First player starts a new game.
     }
@@ -42,6 +44,7 @@ function receiveMoves(board, websocket) {
       case "init":
         // Create link for inviting the second player.
         document.querySelector(".join").href = "?join=" + event.join;
+        document.querySelector(".watch").href = "?watch=" + event.watch;
         break;
       case "play":
         // Update the UI with the move.
@@ -68,6 +71,9 @@ window.addEventListener("DOMContentLoaded", () => {
   // Open the WebSocket connection and register event handlers.
   const websocket = new WebSocket("ws://localhost:8001/");
   initGame(websocket);
-  sendMoves(board, websocket);
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("watch")) {
+    sendMoves(board, websocket);
+  }
   receiveMoves(board, websocket);
 });
