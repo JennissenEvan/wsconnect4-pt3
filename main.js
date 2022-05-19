@@ -1,5 +1,15 @@
 import { createBoard, playMove } from "./connect4.js";
 
+function getWebSocketServer() {
+  if (window.location.host === "JennissenEvan.github.io") {
+    return "wss://websockets-tutorial1.herokuapp.com/";
+  } else if (window.location.host === "localhost:8002") {
+    return "ws://localhost:8001/";
+  } else {
+    throw new Error(`Unsupported host: ${window.location.host}`);
+  }
+}
+
 function initGame(websocket) {
   websocket.addEventListener("open", () => {
     // Send an "init" event according to who is connecting.
