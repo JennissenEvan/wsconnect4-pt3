@@ -10,6 +10,56 @@ import secrets
 JOIN = {}
 
 
+async def error(websocket, message):
+    event = {
+        "type": "error",
+        "message": message,
+    }
+    await websocket.send(json.dumps(event))
+
+
+async def broadcast(connected, event):
+    for websocket in connected:
+        await websocket.send(json.dumps(event))
+
+
+async def play(websocket, game, player, connected):
+    async for message in websocket:
+        event = json.loads(message)
+
+        if event["type"] == "play":
+            if len(connected) < 2:
+                await error(websocket, "The other player has not connected yet.")
+
+            if player is game.last_player:
+                await error(websocket, "It's not your turn!")
+                continue
+
+            column = event["column"]
+
+            try:
+                row = game.play(player, column)
+                out_event = {
+                    "type": "play",
+                    "player": player,
+                    "column": column,
+                    "row": row
+                }
+                await broadcast(connected, out_event)
+
+            except RuntimeError as e:
+                await error(websocket, str(e))
+
+                continue
+
+            if game.last_player_won:
+                out_event = {
+                    "type": "win",
+                    "player": game.last_player
+                }
+                await broadcast(connected, out_event)
+
+
 async def start(websocket):
     # Initialize a Connect Four game, the set of WebSocket connections
     # receiving moves from this game, and secret access token.
@@ -28,21 +78,10 @@ async def start(websocket):
         }
         await websocket.send(json.dumps(event))
 
-        # Temporary - for testing.
-        print("first player started game", id(game))
-        async for message in websocket:
-            print("first player sent", message)
+        await play(websocket, game, PLAYER1, connected)
 
     finally:
         del JOIN[join_key]
-
-
-async def error(websocket, message):
-    event = {
-        "type": "error",
-        "message": message,
-    }
-    await websocket.send(json.dumps(event))
 
 
 async def join(websocket, join_key):
@@ -56,11 +95,7 @@ async def join(websocket, join_key):
     # Register to receive moves from this game.
     connected.add(websocket)
     try:
-
-        # Temporary - for testing.
-        print("second player joined game", id(game))
-        async for message in websocket:
-            print("second player sent", message)
+        await play(websocket, game, PLAYER2, connected)
 
     finally:
         connected.remove(websocket)
